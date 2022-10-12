@@ -194,3 +194,23 @@ input.people{
   display: flex;
   align-items: end;
 }
+
+.error {
+  color:red
+}
+
+input.invalid{
+  border-color: red;
+}
+
+label {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+button.custom-tip{
+  background-color: #f3f8fa !important;
+  color: #00474b;
+}

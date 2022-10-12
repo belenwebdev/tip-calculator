@@ -1,97 +1,70 @@
 import React, { useState, useEffect } from 'react';
 import screenshot from './assets/active-states.jpg'
+import Tip from './Tip';
 import './App.css'
 
 function App() {
+  const initialInputState = { data: '', valid: true, touched: false};
   const initialData = {
-    bill: null,
-    tip: null,
-    customTip: null,
-    people: null
+    bill: {...initialInputState},
+    tip: {...initialInputState},
+    customTip: {...initialInputState},
+    people: {...initialInputState}
   };
 
   const [formData, setFormData] = useState(initialData);
-  const [formErrors, setFormErrors] = useState(initialData);
+  const [customTip, setCustomTip] = useState(false);
   const [tip, setTip] = useState(0);
   const [total, setTotal] = useState(0);
-  const [touched, setTouched] = useState(false);
-
-  function getTip() {
-    return Number(formData.customTip || formData.tip);
-  }
 
   React.useEffect(function() {
     calculateTotals();
-    validateForm();
   },[formData])
 
   function calculateTotals(){
-    const newTip = +formData.people == 0 || +formData.bill == 0 ? 0 : (formData.bill * (getTip() / 100)) / formData.people;
+    const people = +formData.people.data;
+    const bill = +formData.bill.data;
+    const tip = +formData.tip.data;
+    const newTip = !people || !bill ? 0 : (bill * (tip / 100)) / people;
     setTip(newTip);
-    const newTotal = +formData.people == 0 ? 0 : (formData.bill / formData.people) + newTip;
-    setTotal(newTotal);
-  }
-
-  function validateForm(){
-    if(!touched) return;
-    console.log('validate form');
-    const ERROR_MESSAGE = 'Cannot be empty';
-    if(!formData.bill){
-      console.log('bill is empty');
-      setFormErrors(errors=>{
-        return {...errors, bill: ERROR_MESSAGE}
-      })
-    }
-    if(!formData.tip && !formData.tip){
-      console.log('tip is empty');
-      setFormErrors(errors=>{
-        return {...errors, tip: ERROR_MESSAGE}
-      })
-    }
-    if(!formData.people && !formData.people){
-      console.log('people is empty');
-      setFormErrors(errors=>{
-        return {...errors, people: ERROR_MESSAGE}
-      })
-    }
+    setTotal(!people ? 0 : (bill / people) + newTip);
   }
 
   function handleChange(event) {
-    const {name, value, type, checked} = event.target;
+    const {name, value} = event.target;
     console.log(`update ${name} -> ${value}`);
     setFormData(prevFormData => {
         return {
             ...prevFormData,
-            [name]: type === "checkbox" ? checked : (type === "number" ? Number(value) : value)
+            [name]: {...formData[name], data: Number(value), touched: true, valid: +value>0 }
         }
     });
-    setTouched(true);
-    // if it's a custom tip, clear selected tip
-    if(name=='customTip'){
-      setFormData(prevFormData => {
-        return {
-            ...prevFormData,
-            tip: undefined,
-        }
-      })
-    }
   }
 
   function selectTip(newTip){
     setFormData(prevFormData => {
       return {
           ...prevFormData,
-          tip: Number(newTip),
-          customTip: undefined
+          tip: {...formData[tip], data: Number(newTip), touched: true, valid: true },
       }
     })
+    setCustomTip(false);
   }
 
   function resetForm(){
     setFormData(initialData);
-    setFormErrors(initialData);
-    setTouched(false);
+    setCustomTip(false);
   }
+
+  function handleCustomTip(){
+    selectTip('');
+    setCustomTip(true);
+  }
+
+  const tipOptions = [5,10,15,25,50];
+  const tips = tipOptions.map(tip=>{
+    return (<Tip tip={tip} key={tip} selected={!customTip && formData.tip.data==tip} handleClick={()=> selectTip(tip)}></Tip>);
+  })
 
   return (
     <div className="App">
@@ -102,35 +75,54 @@ function App() {
         <div className="card">
           <div className="controls">
             <div className="row">
-              <label>Bill</label>
+              <label htmlFor="bill">
+                Bill
+                <span className="error">{!formData.bill.valid && 'Can\'t be zero'}</span>
+              </label>
               <input 
                 type="number" 
-                className="bill" 
+                className={`bill ${formData.bill.valid?'':'invalid'}`} 
                 placeholder="0" 
                 lang="en" 
                 onChange={handleChange} 
                 name="bill" 
-                value={formData.bill}
+                value={formData.bill.data}
                 required
                 min="1"
               ></input>
             </div>
             <br/>
             <div className="row">
-              <label>Select Tip %</label>
+              <label htmlFor="tip">
+                Select Tip %
+                <span className="error">{!formData.tip.valid && 'Can\'t be zero'}</span>
+              </label>
               <div className="tip-options-wrapper">
-                <div className={`tip-option ${formData.tip==5 ? "selected" : ""}`} onClick={() => selectTip(5)}>5%</div>
-                <div className={`tip-option ${formData.tip==10 ? "selected" : ""}`} onClick={() => selectTip(10)}>10%</div>
-                <div className={`tip-option ${formData.tip==15 ? "selected" : ""}`} onClick={() => selectTip(15)}>15%</div>
-                <div className={`tip-option ${formData.tip==25 ? "selected" : ""}`} onClick={() => selectTip(25)}>25%</div>
-                <div className={`tip-option ${formData.tip==50 ? "selected" : ""}`} onClick={() => selectTip(50)}>50%</div>
-                <input type="number" className="custom-tip" onChange={handleChange} name="customTip" value={formData.customTip}></input>
+                {tips}
+                {customTip && <input 
+                  type="number" 
+                  className={formData.tip.valid?'':'invalid'}
+                  onChange={handleChange} 
+                  name="tip" 
+                  value={formData.tip.data}
+                ></input>}
+                {!customTip && <button className="custom-tip" onClick={handleCustomTip}>CUSTOM</button>}
               </div>
             </div>
             <br/>
             <div className="row">
-              <label>Number of people</label>
-              <input type="number" className="people" placeholder="0" onChange={handleChange} name="people" value={formData.people}></input>
+              <label htmlFor="people">
+                Number of people
+                <span className="error">{!formData.people.valid && 'Can\'t be zero'}</span>
+              </label>
+              <input 
+                type="number" 
+                className={`people ${formData.people.valid?'':'invalid'}`} 
+                placeholder="0" 
+                onChange={handleChange} 
+                name="people" 
+                value={formData.people.data}
+              ></input>
             </div>
           </div>
           <div className="result">
